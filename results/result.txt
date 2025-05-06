@@ -1,0 +1,173 @@
+2025-04-08 03:22:41 - Starting embedding comparison...
+2025-04-08 03:22:41 - 
+==================================================
+Processing CBOW embeddings
+==================================================
+2025-04-08 03:22:41 - DataFrame shape: (13000, 102)
+2025-04-08 03:22:41 - DataFrame columns: Index(['Unnamed: 0', 'CommentClass_en', 'dim_0', 'dim_1', 'dim_2', 'dim_3',
+       'dim_4', 'dim_5', 'dim_6', 'dim_7',
+       ...
+       'dim_90', 'dim_91', 'dim_92', 'dim_93', 'dim_94', 'dim_95', 'dim_96',
+       'dim_97', 'dim_98', 'dim_99'],
+      dtype='object', length=102)
+2025-04-08 03:22:41 - Sample data:
+   Unnamed: 0 CommentClass_en     dim_0     dim_1     dim_2  ...    dim_95    dim_96    dim_97    dim_98    dim_99
+0           0     ['Product'] -0.253757  0.397458  0.016744  ...  0.363337  0.102983 -0.419066  0.064008 -0.069965
+1           1     ['Product'] -0.258606  0.424249  0.016515  ...  0.433717  0.132068 -0.501048  0.107779 -0.082782
+
+[2 rows x 102 columns]
+2025-04-08 03:22:41 - Feature shape: (13000, 100), Label shape: (13000, 12)
+2025-04-08 03:22:41 - Label classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:22:41 - Sample labels: [['Product'], ['Product'], ['Product'], ['Product'], ['Product']]
+2025-04-08 03:22:41 - Data shape: X=(13000, 100), y=(13000, 12)
+2025-04-08 03:22:41 - Classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:22:42 - Epoch [1/20], Loss: 0.2602
+2025-04-08 03:22:42 - Epoch [2/20], Loss: 0.2019
+2025-04-08 03:22:42 - Epoch [3/20], Loss: 0.1938
+2025-04-08 03:22:43 - Epoch [4/20], Loss: 0.1894
+2025-04-08 03:22:44 - Epoch [5/20], Loss: 0.1866
+2025-04-08 03:22:45 - Epoch [6/20], Loss: 0.1841
+2025-04-08 03:22:46 - Epoch [7/20], Loss: 0.1815
+2025-04-08 03:22:47 - Epoch [8/20], Loss: 0.1801
+2025-04-08 03:22:48 - Epoch [9/20], Loss: 0.1783
+2025-04-08 03:22:49 - Epoch [10/20], Loss: 0.1761
+2025-04-08 03:22:50 - Epoch [11/20], Loss: 0.1749
+2025-04-08 03:22:52 - Epoch [12/20], Loss: 0.1735
+2025-04-08 03:22:52 - Epoch [13/20], Loss: 0.1727
+2025-04-08 03:22:53 - Epoch [14/20], Loss: 0.1711
+2025-04-08 03:22:54 - Epoch [15/20], Loss: 0.1706
+2025-04-08 03:22:54 - Epoch [16/20], Loss: 0.1688
+2025-04-08 03:22:55 - Epoch [17/20], Loss: 0.1694
+2025-04-08 03:22:56 - Epoch [18/20], Loss: 0.1677
+2025-04-08 03:22:57 - Epoch [19/20], Loss: 0.1669
+2025-04-08 03:22:58 - Epoch [20/20], Loss: 0.1661
+2025-04-08 03:22:58 - Neural Network Results for CBOW:
+2025-04-08 03:22:58 - Accuracy: 0.4327
+2025-04-08 03:22:58 - Precision: 0.7189
+2025-04-08 03:22:58 - Recall: 0.4577
+2025-04-08 03:22:58 - F1 Score: 0.5242
+2025-04-08 03:23:06 - SVM Results for CBOW:
+2025-04-08 03:23:06 - Accuracy: 0.4608
+2025-04-08 03:23:06 - Precision: 0.8234
+2025-04-08 03:23:06 - Recall: 0.5136
+2025-04-08 03:23:06 - F1 Score: 0.6226
+2025-04-08 03:23:51 - RF Results for CBOW:
+2025-04-08 03:23:51 - Accuracy: 0.5062
+2025-04-08 03:23:51 - Precision: 0.7853
+2025-04-08 03:23:51 - Recall: 0.5473
+2025-04-08 03:23:51 - F1 Score: 0.6317
+2025-04-08 03:23:51 - 
+==================================================
+Processing Skip-gram embeddings
+==================================================
+2025-04-08 03:23:51 - DataFrame shape: (13000, 102)
+2025-04-08 03:23:51 - DataFrame columns: Index(['Unnamed: 0', 'CommentClass_en', 'dim_0', 'dim_1', 'dim_2', 'dim_3',
+       'dim_4', 'dim_5', 'dim_6', 'dim_7',
+       ...
+       'dim_90', 'dim_91', 'dim_92', 'dim_93', 'dim_94', 'dim_95', 'dim_96',
+       'dim_97', 'dim_98', 'dim_99'],
+      dtype='object', length=102)
+2025-04-08 03:23:51 - Sample data:
+   Unnamed: 0 CommentClass_en  dim_0  dim_1  dim_2  dim_3  ...  dim_94  dim_95  dim_96  dim_97  dim_98  dim_99
+0           0     ['Product']    0.0    0.0    0.0    0.0  ...     0.0     0.0     0.0     0.0     0.0     0.0
+1           1     ['Product']    0.0    0.0    0.0    0.0  ...     0.0     0.0     0.0     0.0     0.0     0.0
+
+[2 rows x 102 columns]
+2025-04-08 03:23:51 - Feature shape: (13000, 100), Label shape: (13000, 12)
+2025-04-08 03:23:51 - Label classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:23:51 - Sample labels: [['Product'], ['Product'], ['Product'], ['Product'], ['Product']]
+2025-04-08 03:23:51 - Data shape: X=(13000, 100), y=(13000, 12)
+2025-04-08 03:23:51 - Classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:23:51 - Epoch [1/20], Loss: 0.3212
+2025-04-08 03:23:52 - Epoch [2/20], Loss: 0.2447
+2025-04-08 03:23:53 - Epoch [3/20], Loss: 0.2439
+2025-04-08 03:23:53 - Epoch [4/20], Loss: 0.2431
+2025-04-08 03:23:55 - Epoch [5/20], Loss: 0.2427
+2025-04-08 03:23:57 - Epoch [6/20], Loss: 0.2429
+2025-04-08 03:24:00 - Epoch [7/20], Loss: 0.2426
+2025-04-08 03:24:02 - Epoch [8/20], Loss: 0.2425
+2025-04-08 03:24:05 - Epoch [9/20], Loss: 0.2426
+2025-04-08 03:24:08 - Epoch [10/20], Loss: 0.2423
+2025-04-08 03:24:11 - Epoch [11/20], Loss: 0.2421
+2025-04-08 03:24:13 - Epoch [12/20], Loss: 0.2423
+2025-04-08 03:24:16 - Epoch [13/20], Loss: 0.2423
+2025-04-08 03:24:18 - Epoch [14/20], Loss: 0.2423
+2025-04-08 03:24:18 - Early stopping at epoch 14
+2025-04-08 03:24:18 - Neural Network Results for Skip-gram:
+2025-04-08 03:24:18 - Accuracy: 0.0000
+2025-04-08 03:24:18 - Precision: 0.0000
+2025-04-08 03:24:18 - Recall: 0.0000
+2025-04-08 03:24:18 - F1 Score: 0.0000
+2025-04-08 03:24:18 - SVM Results for Skip-gram:
+2025-04-08 03:24:18 - Accuracy: 0.0000
+2025-04-08 03:24:18 - Precision: 0.0000
+2025-04-08 03:24:18 - Recall: 0.0000
+2025-04-08 03:24:18 - F1 Score: 0.0000
+2025-04-08 03:24:22 - RF Results for Skip-gram:
+2025-04-08 03:24:22 - Accuracy: 0.0000
+2025-04-08 03:24:22 - Precision: 0.0000
+2025-04-08 03:24:22 - Recall: 0.0000
+2025-04-08 03:24:22 - F1 Score: 0.0000
+2025-04-08 03:24:22 - 
+==================================================
+Processing SBERT embeddings
+==================================================
+2025-04-08 03:24:22 - DataFrame shape: (13000, 386)
+2025-04-08 03:24:22 - DataFrame columns: Index(['Unnamed: 0', 'CommentClass_en', 'dim_0', 'dim_1', 'dim_2', 'dim_3',
+       'dim_4', 'dim_5', 'dim_6', 'dim_7',
+       ...
+       'dim_374', 'dim_375', 'dim_376', 'dim_377', 'dim_378', 'dim_379',
+       'dim_380', 'dim_381', 'dim_382', 'dim_383'],
+      dtype='object', length=386)
+2025-04-08 03:24:22 - Sample data:
+   Unnamed: 0 CommentClass_en  dim_0  dim_1  dim_2  dim_3  ...  dim_378  dim_379  dim_380  dim_381  dim_382  dim_383
+0           0     ['Product']    0.0    0.0    0.0    0.0  ...      0.0      0.0      0.0      0.0      0.0      0.0
+1           1     ['Product']    0.0    0.0    0.0    0.0  ...      0.0      0.0      0.0      0.0      0.0      0.0
+
+[2 rows x 386 columns]
+2025-04-08 03:24:22 - Feature shape: (13000, 384), Label shape: (13000, 12)
+2025-04-08 03:24:22 - Label classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:24:22 - Sample labels: [['Product'], ['Product'], ['Product'], ['Product'], ['Product']]
+2025-04-08 03:24:22 - Data shape: X=(13000, 384), y=(13000, 12)
+2025-04-08 03:24:22 - Classes: ['Priceperformance' 'Product' 'Speedeslimat' 'convenience'
+ 'fiyatperformans' 'good -up' 'hızlıteslimat' 'iyipaketleme'
+ 'kaliteliürün' 'uygunfiyat' 'your quality' 'ürüngüzel']
+2025-04-08 03:24:23 - Epoch [1/20], Loss: 0.2776
+2025-04-08 03:24:23 - Epoch [2/20], Loss: 0.2427
+2025-04-08 03:24:24 - Epoch [3/20], Loss: 0.2421
+2025-04-08 03:24:26 - Epoch [4/20], Loss: 0.2423
+2025-04-08 03:24:34 - Epoch [5/20], Loss: 0.2420
+2025-04-08 03:24:49 - Epoch [6/20], Loss: 0.2418
+2025-04-08 03:25:04 - Epoch [7/20], Loss: 0.2417
+2025-04-08 03:25:19 - Epoch [8/20], Loss: 0.2418
+2025-04-08 03:25:33 - Epoch [9/20], Loss: 0.2418
+2025-04-08 03:25:48 - Epoch [10/20], Loss: 0.2417
+2025-04-08 03:25:48 - Early stopping at epoch 10
+2025-04-08 03:25:49 - Neural Network Results for SBERT:
+2025-04-08 03:25:49 - Accuracy: 0.0000
+2025-04-08 03:25:49 - Precision: 0.0000
+2025-04-08 03:25:49 - Recall: 0.0000
+2025-04-08 03:25:49 - F1 Score: 0.0000
+2025-04-08 03:25:49 - SVM Results for SBERT:
+2025-04-08 03:25:49 - Accuracy: 0.0000
+2025-04-08 03:25:49 - Precision: 0.0000
+2025-04-08 03:25:49 - Recall: 0.0000
+2025-04-08 03:25:49 - F1 Score: 0.0000
+2025-04-08 03:26:04 - RF Results for SBERT:
+2025-04-08 03:26:04 - Accuracy: 0.0000
+2025-04-08 03:26:04 - Precision: 0.0000
+2025-04-08 03:26:04 - Recall: 0.0000
+2025-04-08 03:26:04 - F1 Score: 0.0000
+2025-04-08 03:26:05 - Results visualization saved to '../results/embedding_comparison.png'
+2025-04-08 03:26:05 - Detailed results saved to '../results/embedding_comparison_results.csv'
+2025-04-08 03:26:05 - Embedding comparison completed!
