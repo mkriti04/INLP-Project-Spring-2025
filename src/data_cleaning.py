@@ -39,7 +39,7 @@ def safe_parse(label_str: str):
         return [label_str]
 
 # 3) Process each translated_output CSV
-for path in glob.glob('../datasets/interim/translated_output_2.csv'):
+for path in glob.glob('../datasets/interim/converted_amazonReviews_50k.csv'):
     df = pd.read_csv(path)
     
     # Drop any Unnamed columns (pandas index leftovers)

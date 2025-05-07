@@ -82,5 +82,9 @@ def translate_dataset(input_file, output_file, batch_size=10):
 # Example usage
 # translate_dataset('electronicComments.csv', 'translated_output_1.csv', batch_size=100)
 # translate_dataset('homeComments.csv', 'translated_output_2.csv', batch_size=100)
-translate_dataset('womanComments.csv', 'translated_output_3.csv', batch_size=100)
+translate_dataset(
+    '../datasets/interim/',
+    '../datasets/interim/translated_output_3.csv',
+    batch_size=100
+)
 

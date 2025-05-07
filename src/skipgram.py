@@ -13,8 +13,8 @@ import torch
 
 # === 1. Setup directories ===
 os.makedirs("models", exist_ok=True)
-os.makedirs("datasets/interim/embeddings/csv", exist_ok=True)
-os.makedirs("datasets/interim/embeddings/pt", exist_ok=True)
+os.makedirs("datasets/interim/embeddings/csv/amazonreviews", exist_ok=True)
+os.makedirs("datasets/interim/embeddings/pt/amazonreviews", exist_ok=True)
 
 # === 2. Download NLTK data (first run only) ===
 nltk.download('punkt')
@@ -49,7 +49,7 @@ def safe_parse(lst_str):
 # === 4. Load and process the dataset ===
 print("→ Loading dataset...")
 # Replace with your actual dataset path
-df = pd.read_csv("../datasets/interim/translated_output_2_clean.csv")
+df = pd.read_csv("../datasets/interim/converted_amazonReviews_50k_clean.csv")
 
 # Clean up any unnamed columns
 df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
@@ -95,7 +95,7 @@ torch.save({
     'features': emb_tensor,
     'word_to_index': word_to_index,
     'index_to_word': index_to_word
-}, "../datasets/interim/embeddings/pt/skipgram_2.pt")
+}, "../datasets/interim/embeddings/pt/amazonreviews/skipgram_amazon.pt")
 print(f"✓ Saved Skip-gram word embeddings (.pt) with shape {emb_tensor.shape}")
 
 # === 8. Compute document embeddings
@@ -117,7 +117,7 @@ torch.save({
     'embeddings': doc_embs_tensor,
     'labels': labels_list,
     'indices': idxs
-}, "../datasets/interim/embeddings/pt/skipgram_2.pt")
+}, "../datasets/interim/embeddings/pt/amazonreviews/skipgram_amazon.pt")
 print(f"✓ Saved Skip-gram document embeddings (.pt) with shape {doc_embs_tensor.shape}")
 
 # === 10. Save document embeddings (.csv)
@@ -126,6 +126,6 @@ out_df = pd.DataFrame(doc_embs)
 # Add original indices and labels
 out_df.insert(0, 'original_index', idxs)
 out_df['labels'] = [str(l) for l in lbls]  # Convert labels to string for CSV storage
-out_path = "../datasets/interim/embeddings/csv/skipgram_2.csv"
+out_path = "../datasets/interim/embeddings/csv/amazonreviews/skipgram_amazon.csv"
 out_df.to_csv(out_path, index=False)
 print(f"✓ Saved Skip-gram document embeddings (.csv) → {out_path}")
