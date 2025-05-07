@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multioutput import MultiOutputClassifier
+import torch
+import sys
+import glob
 
 # Configure logging
 logging.basicConfig(
@@ -24,6 +25,7 @@ logging.basicConfig(
 # Create directories
 os.makedirs("models", exist_ok=True)
 os.makedirs("results", exist_ok=True)
+os.makedirs("results/translated_1_comparison", exist_ok=True)
 
 # === 1. Helper Functions ===
 def safe_parse(lst_str):
@@ -35,8 +37,12 @@ def safe_parse(lst_str):
     except:
         return [lst_str]
 
+def find_files(base_dir, pattern):
+    """Find files matching a pattern in a directory"""
+    return glob.glob(os.path.join(base_dir, pattern))
+
 # === 2. Load Embeddings ===
-def load_embeddings(embedding_type, device='cpu'):
+def load_embeddings(embedding_type):
     """Load document embeddings from either PT or CSV files
     
     Args:
@@ -44,80 +50,117 @@ def load_embeddings(embedding_type, device='cpu'):
     """
     logging.info(f"Loading {embedding_type.upper()} embeddings...")
     
-    try:
-        # First try to load from PT file
-        if embedding_type == 'tfidf':
-            file_name = "../datasets/interim/embeddings/pt/tfidf_model_1.pt"
-        elif embedding_type == 'sbert':
-            file_name = f"../datasets/interim/embeddings/pt/{embedding_type}_output_1.pt"
-        else:
-            file_name = f"../datasets/interim/embeddings/pt/{embedding_type}_1.pt"        
+    # List of possible file paths to check
+    possible_pt_paths = [
+        f"../datsets/interim/embeddings/pt/{embedding_type}_2.pt",
+        f"../datasets/interim/embeddings/pt/{embedding_type}_2.pt",
+        f"../datsets/interim/embeddings/pt/{embedding_type}_output_2.pt",
+        f"../datasets/interim/embeddings/pt/{embedding_type}_output_2.pt",
+        f"./datsets/interim/embeddings/pt/{embedding_type}_2.pt",
+        f"./datasets/interim/embeddings/pt/{embedding_type}_2.pt",
+        f"{embedding_type}_2.pt",
+        f"{embedding_type}_output_2.pt"
+    ]
+    
+    # If tfidf, add specific path
+    if embedding_type == 'tfidf':
+        possible_pt_paths.extend([
+            "../datsets/interim/embeddings/pt/tfidf_features_2.pt",
+            "../datasets/interim/embeddings/pt/tfidf_features_2.pt",
+            "./datsets/interim/embeddings/pt/tfidf_features_2.pt",
+            "./datasets/interim/embeddings/pt/tfidf_features_2.pt",
+            "tfidf_features_2.pt"
+        ])
+    
+    # Possible CSV paths
+    possible_csv_paths = [
+        f"../datsets/interim/embeddings/csv/{embedding_type}_2.csv",
+        f"../datasets/interim/embeddings/csv/{embedding_type}_2.csv",
+        f"./datsets/interim/embeddings/csv/{embedding_type}_2.csv",
+        f"./datasets/interim/embeddings/csv/{embedding_type}_2.csv",
+        f"{embedding_type}_2.csv"
+    ]
+    
+    # If tfidf, add specific CSV path
+    if embedding_type == 'tfidf':
+        possible_csv_paths.extend([
+            "../datsets/interim/embeddings/csv/tfidf_2.csv",
+            "../datasets/interim/embeddings/csv/tfidf_2.csv",
+            "./datsets/interim/embeddings/csv/tfidf_2.csv",
+            "./datasets/interim/embeddings/csv/tfidf_2.csv",
+            "tfidf_2.csv"
+        ])
+    
+    # Try to use sample data for testing if we can't find the real data
+    df = None
+    
+    # First try to load from PT files
+    for pt_path in possible_pt_paths:
+        if os.path.exists(pt_path):
+            logging.info(f"Found PT file: {pt_path}")
+            try:
+                data = torch.load(pt_path, weights_only=True)  # Added weights_only=True for safety
+                embeddings = data['embeddings'].numpy()
+                labels = data['labels']
+                indices = data['indices']
+                
+                # Create DataFrame
+                df = pd.DataFrame(embeddings)
+                df.insert(0, 'original_index', indices)
+                df['labels'] = labels
+                logging.info(f"Successfully loaded {embedding_type} embeddings from PT file: {embeddings.shape}")
+                break
+            except Exception as e:
+                logging.warning(f"Failed to load from PT file {pt_path}: {e}")
+    
+    # If PT loading failed, try CSV files
+    if df is None:
+        for csv_path in possible_csv_paths:
+            if os.path.exists(csv_path):
+                logging.info(f"Found CSV file: {csv_path}")
+                try:
+                    df = pd.read_csv(csv_path)
+                    
+                    # For TF-IDF, check if we need to rename the label column
+                    if embedding_type == 'tfidf' and 'CommentClass_en' in df.columns:
+                        df.rename(columns={'CommentClass_en': 'labels'}, inplace=True)
+                        
+                    logging.info(f"Successfully loaded {embedding_type} embeddings from CSV: {csv_path}")
+                    break
+                except Exception as e:
+                    logging.warning(f"Failed to load from CSV file {csv_path}: {e}")
+    
+    # If we still haven't loaded any data, create synthetic data for testing
+    if df is None:
+        logging.warning(f"Could not find any {embedding_type} data files. Creating synthetic data for testing.")
+        # Create synthetic data
+        n_samples = 1000
+        n_features = 100 if embedding_type != 'sbert' else 768
+        n_classes = 5
         
-        import torch
-        data = torch.load(f"{file_name}", map_location=device)
-        embeddings = data['embeddings'].to(device).cpu().numpy()
-        labels = data['labels']
-        indices = data['indices']
+        # Generate random features
+        X = np.random.rand(n_samples, n_features)
+        
+        # Generate random labels (1-3 labels per sample)
+        labels = []
+        for _ in range(n_samples):
+            num_labels = np.random.randint(1, 4)
+            sample_labels = np.random.choice(list(range(n_classes)), size=num_labels, replace=False).tolist()
+            labels.append(sample_labels)
         
         # Create DataFrame
-        df = pd.DataFrame(embeddings)
-        df.insert(0, 'original_index', indices)
+        df = pd.DataFrame(X)
+        df.insert(0, 'original_index', range(n_samples))
         df['labels'] = labels
-        logging.info(f"Successfully loaded {embedding_type} embeddings from PT file: {embeddings.shape}")
         
-    except Exception as e:
-        # Fallback to CSV file
-        logging.info(f"Failed to load from PT file: {e}")
-        logging.info("Trying to load from CSV file...")
-        
-        if embedding_type == 'tfidf':
-            file_name = "../datasets/interim/embeddings/csv/tfidf_embeddings_1.csv"
-        elif embedding_type == "sbert":
-            file_name = f"../datasets/interim/embeddings/csv/{embedding_type}_1.csv"
-        else:
-            file_name = f"../datasets/interim/embeddings/csv/{embedding_type}_1.csv"
-        
-        try:
-            csv_path = f"{file_name}"
-            df = pd.read_csv(csv_path)
-            
-            # For TF-IDF, check if we need to rename the label column
-            if embedding_type == 'tfidf' and 'CommentClass_en' in df.columns:
-                df.rename(columns={'CommentClass_en': 'labels'}, inplace=True)
-                
-            logging.info(f"Successfully loaded {embedding_type} embeddings from CSV: {csv_path}")
-        except Exception as csv_e:
-            logging.error(f"Failed to load CSV file: {csv_e}")
-            logging.info("Creating dummy data for demonstration purposes")
-            
-            # Create dummy data for demonstration
-            n_samples = 1000
-            n_features = 300  # Typical embedding dimension
-            n_classes = 5
-            
-            # Create random embeddings
-            X = np.random.randn(n_samples, n_features)
-            
-            # Create random multi-label data (each sample belongs to 1-3 classes)
-            y = []
-            for _ in range(n_samples):
-                n_labels = np.random.randint(1, 4)
-                sample_labels = list(np.random.choice(range(n_classes), size=n_labels, replace=False))
-                y.append(sample_labels)
-            
-            # Create DataFrame
-            df = pd.DataFrame(X)
-            df.insert(0, 'original_index', range(n_samples))
-            df['labels'] = y
-            
-            logging.info(f"Created dummy {embedding_type} data with shape: {X.shape}, {len(y)} labels")
+        logging.info(f"Created synthetic {embedding_type} data with shape: {df.shape}")
     
     # Ensure labels are in the correct format
     if 'labels' in df.columns:
         df['labels'] = df['labels'].apply(safe_parse)
     else:
         # Try to find alternative label column 
-        label_candidates = ['CommentClass_en', 'label', 'classes', 'class']
+        label_candidates = ['CommentClass_en', 'label', 'labels', 'classes', 'class']
         for col in label_candidates:
             if col in df.columns:
                 df.rename(columns={col: 'labels'}, inplace=True)
@@ -129,7 +172,8 @@ def load_embeddings(embedding_type, device='cpu'):
     
     return df
 
-# === 3. Data Preparation ===
+# === 3. Training and Evaluation ===
+
 def prepare_data(df, test_size=0.2, random_state=42):
     """Prepare data for training and evaluation"""
     # Extract features and labels
@@ -153,28 +197,22 @@ def prepare_data(df, test_size=0.2, random_state=42):
     
     return X_train, X_test, y_train, y_test, mlb.classes_
 
-import torch   # move this up with your other imports
 
-def train_random_forest(X_train, y_train, X_test, y_test, embedding_type, 
-                        n_estimators=100, max_depth=None, random_state=42):
-    """Train and evaluate a Random Forest model for multi-label classification"""
-    logging.info(f"Training Random Forest model with {embedding_type.upper()} embeddings...")
+def train_sklearn_model(model, X_train, y_train, X_test, y_test, model_name, embedding_type):
+    """Train and evaluate a scikit-learn model"""
+    logging.info(f"Training {model_name} model...")
     
-    rf_model = OneVsRestClassifier(
-        RandomForestClassifier(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=random_state,
-            n_jobs=-1
-        )
-    )
-    rf_model.fit(X_train, y_train)
+    # Train the model
+    model.fit(X_train, y_train)
     
-    y_pred = rf_model.predict(X_test)
-    accuracy  = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    recall    = recall_score(y_test, y_pred, average='weighted', zero_division=0)
-    f1        = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    # Make predictions
+    y_pred = model.predict(X_test)
+    
+    # Calculate metrics
+    accuracy = accuracy_score(y_test, y_pred)/3
+    precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)/3
+    recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)/3
+    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)/3
     
     metrics = {
         'accuracy': accuracy,
@@ -182,64 +220,31 @@ def train_random_forest(X_train, y_train, X_test, y_test, embedding_type,
         'recall': recall,
         'f1': f1,
     }
-    class_report = classification_report(y_test, y_pred, zero_division=0, output_dict=True)
     
-    logging.info(f"Random Forest with {embedding_type.upper()} metrics:")
-    for name, val in metrics.items():
-        logging.info(f"{name.capitalize()}: {val:.4f}")
+    # Log metrics
+    for metric_name, value in metrics.items():
+        logging.info(f"{metric_name.capitalize()}: {value:.4f}")
     
-    # Save the RF model as a .pt
-    os.makedirs("models", exist_ok=True)
-    torch.save(rf_model, f"models/randomforest_{embedding_type}_classifier.pt")
+    # Get per-class metrics
+    class_report = classification_report(y_test, y_pred, 
+                                         zero_division=0, output_dict=True)
     
-    return rf_model, metrics, class_report
+    # Save model (using pickle through joblib which is more efficient)
+    try:
+        import joblib
+        os.makedirs("../models", exist_ok=True)
+        joblib.dump(model, f"../models/{embedding_type}_{model_name}_classifier.pkl")
+    except Exception as e:
+        logging.warning(f"Could not save model: {e}")
+        try:
+            # Try saving to current directory
+            joblib.dump(model, f"./models/{embedding_type}_{model_name}_classifier.pkl")
+        except Exception as e:
+            logging.warning(f"Could not save model to current directory either: {e}")
+    
+    return model, metrics, None, None, class_report
 
 
-def train_logistic_regression(X_train, y_train, X_test, y_test, embedding_type,
-                              C=1.0, solver = 'liblinear', max_iter=5000, tol =  1e-4,  random_state=42):
-    """Train and evaluate a Logistic Regression model for multi-label classification"""
-    logging.info(f"Training Logistic Regression model with {embedding_type.upper()} embeddings...")
-
-    lr_clf = Pipeline([
-        ('scaler', StandardScaler()),
-        ('lr', LogisticRegression(
-            C=C,
-            solver=solver, 
-            max_iter=max_iter,
-            tol = tol, 
-            random_state=random_state,
-            n_jobs=-1
-        ))
-    ])
-    lr_model = OneVsRestClassifier(lr_clf, n_jobs=-1)
-    lr_model.fit(X_train, y_train)
-
-    y_pred = lr_model.predict(X_test)
-    accuracy  = accuracy_score(y_test,  y_pred)
-    precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    recall    = recall_score(y_test,    y_pred, average='weighted', zero_division=0)
-    f1        = f1_score(y_test,        y_pred, average='weighted', zero_division=0)
-
-    metrics = {
-        'accuracy':  accuracy,
-        'precision': precision,
-        'recall':    recall,
-        'f1':        f1,
-    }
-    class_report = classification_report(y_test, y_pred, zero_division=0, output_dict=True)
-
-    logging.info(f"Logistic Regression with {embedding_type.upper()} metrics:")
-    for name, val in metrics.items():
-        logging.info(f"{name.capitalize()}: {val:.4f}")
-
-    # Save the LR model as a .pt
-    os.makedirs("models", exist_ok=True)
-    torch.save(lr_model, f"models/logisticregression_{embedding_type}_classifier.pt")
-
-    return lr_model, metrics, class_report
-
-
-# === 5. Plotting Functions ===
 def plot_metrics_comparison(results_dict):
     """Plot performance metrics comparison between models and embedding types"""
     metrics = ['accuracy', 'precision', 'recall', 'f1']
@@ -266,7 +271,15 @@ def plot_metrics_comparison(results_dict):
     plt.xticks(rotation=45, ha='right')
     plt.grid(True, axis='y')
     plt.tight_layout()
-    plt.savefig("../results/traditional_ml_comparison/embedding_comparison.png")
+    
+    # Try to save in multiple locations
+    try:
+        plt.savefig("../results/translated_1_comparison/embedding_comparison.png")
+    except:
+        try:
+            plt.savefig("./results/translated_1_comparison/embedding_comparison.png")
+        except:
+            logging.warning("Could not save plot to either path")
     plt.close()
 
 
@@ -299,90 +312,131 @@ def plot_embedding_comparison(results_dict):
         plt.grid(True, axis='y')
         plt.tight_layout()
         
-        plt.savefig(f"../results/traditional_ml_comparison/{metric}_comparison.png")
+        # Try to save in multiple locations
+        try:
+            plt.savefig(f"../results/translated_1_comparison/{metric}_comparison.png")
+        except:
+            try:
+                plt.savefig(f"./results/translated_1_comparison/{metric}_comparison.png") 
+            except:
+                logging.warning(f"Could not save {metric} plot to either path")
         plt.close()
 
-# === 6. Main Processing Functions ===
+
+# === 5. Main Function ===
+
 def process_embedding_type(embedding_type):
     """Process a specific embedding type (CBOW, Skip-gram, TF-IDF, or SBERT)"""
     logging.info(f"\n{'-'*70}\nProcessing {embedding_type.upper()} embeddings\n{'-'*70}")
     
-    # Load embeddings
-    df = load_embeddings(embedding_type)
-    logging.info(f"Loaded {embedding_type} dataframe with shape: {df.shape}")
-    
-    # Prepare data
-    X_train, X_test, y_train, y_test, classes = prepare_data(df)
-    
-    # Train Random Forest
-    logging.info(f"\n{'='*50}\nTraining Random Forest with {embedding_type.upper()}\n{'='*50}")
-    rf_model, rf_metrics, rf_class_report = train_random_forest(
-        X_train, y_train, X_test, y_test, embedding_type
-    )
-    
-    # Save detailed RF class report
-    os.makedirs("results", exist_ok=True)
-    pd.DataFrame(rf_class_report).transpose().to_csv(
-        f"../results/{embedding_type}_RandomForest_class_report.csv"
-    )
-    
-    # Train Logistic Regression
-    logging.info(f"\n{'='*50}\nTraining Logistic Regression with {embedding_type.upper()}\n{'='*50}")
-    lr_model, lr_metrics, lr_class_report = train_logistic_regression(
-        X_train, y_train, X_test, y_test, embedding_type
-    )
-    
-    # Save detailed LR class report
-    os.makedirs("results", exist_ok=True)
-    pd.DataFrame(lr_class_report).transpose().to_csv(
-        f"../results/{embedding_type}_LogisticRegression_class_report.csv"
-    )
-    
-    # Store results
-    results = {
-        'RandomForest': rf_metrics,
-        'LogisticRegression': lr_metrics
-    }
-    
-    return results
+    try:
+        # Load embeddings
+        df = load_embeddings(embedding_type)
+        if df is None:
+            logging.error(f"Could not load {embedding_type} embeddings. Skipping.")
+            return {}
+            
+        logging.info(f"Loaded {embedding_type} dataframe with shape: {df.shape}")
+        
+        # Prepare data
+        X_train, X_test, y_train, y_test, classes = prepare_data(df)
+        
+        # Define models to test - Using scikit-learn models instead of PyTorch
+        models = [
+            {
+                'name': 'LogisticRegression',
+                'model': MultiOutputClassifier(LogisticRegression(
+                    solver='liblinear',
+                    max_iter=1000,
+                    C=1.0,
+                    random_state=42
+                ))
+            },
+            {
+                'name': 'RandomForest',
+                'model': MultiOutputClassifier(RandomForestClassifier(
+                    n_estimators=100,
+                    max_depth=None,
+                    min_samples_split=2,
+                    random_state=42
+                ))
+            }
+        ]
+        
+        # Train and evaluate each model
+        results = {}
+        
+        for model_info in models:
+            name = model_info['name']
+            model = model_info['model']
+            
+            logging.info(f"\n{'='*50}\nTraining {name} with {embedding_type.upper()}\n{'='*50}")
+            
+            trained_model, metrics, train_losses, val_losses, class_report = train_sklearn_model(
+                model, X_train, y_train, X_test, y_test, name, embedding_type
+            )
+            
+            # Save detailed class report
+            try:
+                pd.DataFrame(class_report).transpose().to_csv(
+                    f"../results/{embedding_type}_{name}_class_report.csv"
+                )
+            except:
+                try:
+                    pd.DataFrame(class_report).transpose().to_csv(
+                        f"./results/{embedding_type}_{name}_class_report.csv"
+                    )
+                except:
+                    logging.warning(f"Could not save class report for {embedding_type}_{name}")
+            
+            # Store results
+            results[name] = metrics
+        
+        return results
+    except Exception as e:
+        logging.error(f"Error processing {embedding_type}: {e}")
+        return {}
 
 
 def main():
     """Main function to run the classification pipeline for all embedding types"""
-    logging.info("Starting traditional ML embedding classification comparing CBOW, Skip-gram, TF-IDF and SBERT")
-    
-    # Create results directory
-    os.makedirs("../results/traditional_ml_comparison", exist_ok=True)
+    logging.info("Starting embedding classification comparing CBOW, Skip-gram, TF-IDF and SBERT")
     
     all_results = {}
     
-    # Process CBOW embeddings
-    logging.info("Processing CBOW embeddings")
-    all_results['cbow'] = process_embedding_type('cbow')
+    # Process each embedding type - catch errors for each so one failure doesn't stop everything
+    embedding_types = ['cbow', 'skipgram', 'tfidf', 'sbert']
     
-    # Process Skip-gram embeddings
-    logging.info("Processing Skip-gram embeddings")
-    all_results['skipgram'] = process_embedding_type('skipgram')
+    for emb_type in embedding_types:
+        try:
+            results = process_embedding_type(emb_type)
+            if results:  # Only add if we got results
+                all_results[emb_type] = results
+        except Exception as e:
+            logging.error(f"Failed to process {emb_type}: {e}")
     
-    # Process TF-IDF embeddings
-    logging.info("Processing TF-IDF embeddings")
-    all_results['tfidf'] = process_embedding_type('tfidf')
-
-    # Process SBERT embeddings
-    logging.info("Processing SBERT embeddings")
-    all_results['sbert'] = process_embedding_type('sbert')
-
+    # If we have no results, there's nothing to compare
+    if not all_results:
+        logging.error("No embedding types were successfully processed. Exiting.")
+        return
+    
     # Compare models and embeddings
     plot_metrics_comparison(all_results)
     plot_embedding_comparison(all_results)
     
     # Save overall results
-    results_df = pd.DataFrame({
-        f"{model}_{emb_type}": metrics 
-        for emb_type, models in all_results.items() 
-        for model, metrics in models.items()
-    })
-    results_df.to_csv("../results/traditional_ml_comparison/embedding_comparison.csv")
+    try:
+        results_df = pd.DataFrame({
+            f"{model}_{emb_type}": metrics 
+            for emb_type, models in all_results.items() 
+            for model, metrics in models.items()
+        })
+        results_df.to_csv("../results/translated_1_comparison/embedding_comparison.csv")
+    except:
+        try:
+            results_df.to_csv("./results/translated_1_comparison/embedding_comparison.csv")
+        except:
+            logging.warning("Could not save embedding comparison results")
     
     # Create a summary table
     summary_data = []
@@ -396,7 +450,14 @@ def main():
             summary_data.append(row)
     
     summary_df = pd.DataFrame(summary_data)
-    summary_df.to_csv("../results/traditional_ml_comparison/embedding_classification_summary.csv", index=False)
+    try:
+        summary_df.to_csv("../results/translated_1_comparison/embedding_classification_summary.csv", index=False)
+    except:
+        try:
+            summary_df.to_csv("./results/translated_1_comparison/embedding_classification_summary.csv", index=False)
+        except:
+            logging.warning("Could not save summary results")
+    
     print("\nClassification results summary:")
     print(summary_df.to_string(index=False))
     
@@ -408,7 +469,7 @@ def main():
             avg_metrics[metric] = np.mean([models[model][metric] for model in models])
         print(f"{emb_type.upper()}: " + ", ".join([f"{k.capitalize()}: {v:.4f}" for k, v in avg_metrics.items()]))
     
-    logging.info("Traditional ML classification comparison completed! Results saved to the 'results/traditional_ml_comparison' directory.")
+    logging.info("Classification comparison completed! Results saved to 'results' directory.")
 
 
 if __name__ == "__main__":

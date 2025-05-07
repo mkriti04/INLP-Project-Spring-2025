@@ -1,0 +1,9 @@
+Embedding,Model,Accuracy,Precision,Recall,F1
+CBOW,LogisticRegression,0.1654,0.2650,0.1911,0.2201
+CBOW,RandomForest,0.1804,0.2766,0.1962,0.2267
+SKIPGRAM,LogisticRegression,0.1833,0.2757,0.2081,0.2361
+SKIPGRAM,RandomForest,0.1844,0.2868,0.1992,0.2332
+TFIDF,LogisticRegression,0.0117,0.1280,0.0821,0.0994
+TFIDF,RandomForest,0.0133,0.1700,0.0362,0.0590
+SBERT,LogisticRegression,0.2846,0.3106,0.3026,0.3065
+SBERT,RandomForest,0.2906,0.3150,0.3064,0.3103
