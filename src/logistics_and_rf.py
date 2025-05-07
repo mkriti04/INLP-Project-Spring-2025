@@ -11,6 +11,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 # Configure logging
 logging.basicConfig(
@@ -34,7 +36,7 @@ def safe_parse(lst_str):
         return [lst_str]
 
 # === 2. Load Embeddings ===
-def load_embeddings(embedding_type):
+def load_embeddings(embedding_type, device='cpu'):
     """Load document embeddings from either PT or CSV files
     
     Args:
@@ -52,8 +54,8 @@ def load_embeddings(embedding_type):
             file_name = f"../datasets/interim/embeddings/pt/{embedding_type}_1.pt"        
         
         import torch
-        data = torch.load(f"{file_name}")
-        embeddings = data['embeddings'].numpy()
+        data = torch.load(f"{file_name}", map_location=device)
+        embeddings = data['embeddings'].to(device).cpu().numpy()
         labels = data['labels']
         indices = data['indices']
         
@@ -151,32 +153,28 @@ def prepare_data(df, test_size=0.2, random_state=42):
     
     return X_train, X_test, y_train, y_test, mlb.classes_
 
-# === 4. Traditional ML Models ===
+import torch   # move this up with your other imports
+
 def train_random_forest(X_train, y_train, X_test, y_test, embedding_type, 
                         n_estimators=100, max_depth=None, random_state=42):
     """Train and evaluate a Random Forest model for multi-label classification"""
     logging.info(f"Training Random Forest model with {embedding_type.upper()} embeddings...")
     
-    # Initialize and train a multi-label Random Forest model
     rf_model = OneVsRestClassifier(
         RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
             random_state=random_state,
-            n_jobs=-1  # Use all available cores
+            n_jobs=-1
         )
     )
-    
     rf_model.fit(X_train, y_train)
     
-    # Make predictions
     y_pred = rf_model.predict(X_test)
-    
-    # Calculate metrics
-    accuracy = accuracy_score(y_test, y_pred)
+    accuracy  = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
-    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    recall    = recall_score(y_test, y_pred, average='weighted', zero_division=0)
+    f1        = f1_score(y_test, y_pred, average='weighted', zero_division=0)
     
     metrics = {
         'accuracy': accuracy,
@@ -184,71 +182,62 @@ def train_random_forest(X_train, y_train, X_test, y_test, embedding_type,
         'recall': recall,
         'f1': f1,
     }
+    class_report = classification_report(y_test, y_pred, zero_division=0, output_dict=True)
     
-    # Get per-class metrics
-    class_report = classification_report(y_test, y_pred, 
-                                         zero_division=0, output_dict=True)
-    
-    # Log metrics
     logging.info(f"Random Forest with {embedding_type.upper()} metrics:")
-    for metric_name, value in metrics.items():
-        logging.info(f"{metric_name.capitalize()}: {value:.4f}")
+    for name, val in metrics.items():
+        logging.info(f"{name.capitalize()}: {val:.4f}")
     
-    # Save model
-    import joblib
+    # Save the RF model as a .pt
     os.makedirs("models", exist_ok=True)
-    joblib.dump(rf_model, f"../models/randomforest_{embedding_type}_classifier.joblib")
+    torch.save(rf_model, f"models/randomforest_{embedding_type}_classifier.pt")
     
     return rf_model, metrics, class_report
 
+
 def train_logistic_regression(X_train, y_train, X_test, y_test, embedding_type,
-                             C=1.0, max_iter=100, random_state=42):
+                              C=1.0, solver = 'liblinear', max_iter=5000, tol =  1e-4,  random_state=42):
     """Train and evaluate a Logistic Regression model for multi-label classification"""
     logging.info(f"Training Logistic Regression model with {embedding_type.upper()} embeddings...")
-    
-    # Initialize and train a multi-label Logistic Regression model
-    lr_model = OneVsRestClassifier(
-        LogisticRegression(
+
+    lr_clf = Pipeline([
+        ('scaler', StandardScaler()),
+        ('lr', LogisticRegression(
             C=C,
+            solver=solver, 
             max_iter=max_iter,
+            tol = tol, 
             random_state=random_state,
-            n_jobs=-1  # Use all available cores
-        )
-    )
-    
+            n_jobs=-1
+        ))
+    ])
+    lr_model = OneVsRestClassifier(lr_clf, n_jobs=-1)
     lr_model.fit(X_train, y_train)
-    
-    # Make predictions
+
     y_pred = lr_model.predict(X_test)
-    
-    # Calculate metrics
-    accuracy = accuracy_score(y_test, y_pred)
+    accuracy  = accuracy_score(y_test,  y_pred)
     precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
-    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
-    
+    recall    = recall_score(y_test,    y_pred, average='weighted', zero_division=0)
+    f1        = f1_score(y_test,        y_pred, average='weighted', zero_division=0)
+
     metrics = {
-        'accuracy': accuracy,
+        'accuracy':  accuracy,
         'precision': precision,
-        'recall': recall,
-        'f1': f1,
+        'recall':    recall,
+        'f1':        f1,
     }
-    
-    # Get per-class metrics
-    class_report = classification_report(y_test, y_pred, 
-                                         zero_division=0, output_dict=True)
-    
-    # Log metrics
+    class_report = classification_report(y_test, y_pred, zero_division=0, output_dict=True)
+
     logging.info(f"Logistic Regression with {embedding_type.upper()} metrics:")
-    for metric_name, value in metrics.items():
-        logging.info(f"{metric_name.capitalize()}: {value:.4f}")
-    
-    # Save model
-    import joblib
+    for name, val in metrics.items():
+        logging.info(f"{name.capitalize()}: {val:.4f}")
+
+    # Save the LR model as a .pt
     os.makedirs("models", exist_ok=True)
-    joblib.dump(lr_model, f"../models/logisticregression_{embedding_type}_classifier.joblib")
-    
+    torch.save(lr_model, f"models/logisticregression_{embedding_type}_classifier.pt")
+
     return lr_model, metrics, class_report
+
 
 # === 5. Plotting Functions ===
 def plot_metrics_comparison(results_dict):
