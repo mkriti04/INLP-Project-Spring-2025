@@ -8,6 +8,7 @@ from nltk.stem import WordNetLemmatizer
 from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 import random
+import numpy as np
 nltk.download('punkt_tab')
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -15,8 +16,8 @@ nltk.download('wordnet')
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-df = pd.read_csv("../datasets/interim/translated_output_1.csv")  # Replace with your CSV filename
-# df = pd.read_csv("translated_output_2.csv")  # Replace with your CSV filename
+# df = pd.read_csv("./datasets/interim/translated_output_1.csv")  # Replace with your CSV filename
+df = pd.read_csv("../datasets/interim/translated_output_1_clean.csv")  # Replace with your CSV filename
 
 # Preprocess text
 lemmatizer = WordNetLemmatizer()
@@ -91,7 +92,9 @@ train_examples = [
 def collate_fn(batch):
     texts, labels = zip(*batch)
     # embeddings = model.tokenize(list(texts))
-    return list(texts), list(labels)
+    formatted_texts = [{'text': text} for text in texts]
+    return formatted_texts, list(labels)
+    # return list(texts), list(labels)
 
 train_loader = DataLoader(train_examples, shuffle=True, batch_size=32,
                           collate_fn=collate_fn)
@@ -102,12 +105,15 @@ criterion = MultiLabelSupConLoss(temperature=0.05).to(device)
 # A simple training loop
 optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
 model.train()
-for epoch in range(20):
+for epoch in range(10):
     total_loss = 0
     for batch in train_loader:
         embeddings, batch_labels = batch
         # SBERT’s forward to get sentence embeddings
-        z = model.encode(embeddings, convert_to_tensor=True, device=device)
+        # z = model.encode(embeddings, convert_to_tensor=True, device=device)
+        features = model.tokenize(embeddings)
+        features = {k: v.to(device) if torch.is_tensor(v) else v for k, v in features.items()}
+        z = model(features, convert_to_tensor=True)['sentence_embedding']  # ← returns embeddings with gradient support
         loss = criterion(z, batch_labels)
         loss.backward()
         optimizer.step()
@@ -137,5 +143,26 @@ data_bundle = {
 }
 
 # 5. Save to a .pt file
-torch.save(data_bundle, '../datasets/interim/embeddings/pt/sbert_output_2.pt')
-print("Saved embeddings, labels, and indices to 'sbert_output_2.pt'")
+torch.save(data_bundle, '../datasets/interim/embeddings/pt/sbert_output_1.pt')
+print("Saved embeddings, labels, and indices to 'sbert_output_1.pt'")
+
+# 6. Convert embeddings to numpy
+embedding_array = all_embeddings.numpy()
+
+# 7. Flatten labels to semicolon-separated strings
+flattened_labels = [';'.join(label_list) for label_list in all_labels]
+
+# 8. Create column names for embeddings
+embedding_cols = [f"dim_{i}" for i in range(embedding_array.shape[1])]
+
+# 9. Create DataFrame
+csv_df = pd.DataFrame(embedding_array, columns=embedding_cols)
+csv_df['index'] = all_indices
+csv_df['labels'] = flattened_labels
+
+# 10. Reorder columns (optional)
+csv_df = csv_df[['index', 'labels'] + embedding_cols]
+
+# 11. Save to CSV
+csv_df.to_csv('../datasets/interim/embeddings/csv/sbert_output_1.csv', index=False)
+print("Saved embeddings to 'sbert_output_1.csv'")
