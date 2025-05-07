@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 # import pandas as pd
 # import os
 # import logging
@@ -344,6 +346,7 @@
 
 
 
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
 import pandas as pd
 import os
 import logging
@@ -352,18 +355,24 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
 import numpy as np
 from collections import defaultdict
+<<<<<<< HEAD
+=======
 from nltk.stem import PorterStemmer
 import nltk
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+<<<<<<< HEAD
+=======
 # Download NLTK resources if needed
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     nltk.download('punkt')
 
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
 def extract_topics_from_dataset(df, n_topics=10, n_top_words=20):
     """
     Extract topics from the dataset using NMF (Non-negative Matrix Factorization)
@@ -404,6 +413,11 @@ def extract_topics_from_dataset(df, n_topics=10, n_top_words=20):
     
     return topics, nmf, tfidf_vectorizer
 
+<<<<<<< HEAD
+def map_topics_to_classes(topics):
+    """
+    Map extracted topics to predefined classes based on semantic similarity
+=======
 def preprocess_keywords(base_classes):
     """
     Preprocess keywords to improve matching:
@@ -442,12 +456,43 @@ def map_topics_to_classes(topics):
     """
     Map extracted topics to predefined classes based on semantic similarity
     with improved matching for better class distribution
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
     """
     # Define base classes and their seed keywords
     base_classes = {
         'Product': ['quality', 'design', 'material', 'product', 'item', 'works', 'feature'],
         'Priceperformance': ['price', 'value', 'worth', 'expensive', 'cheap', 'cost', 'money'],
         'Shipping': ['shipping', 'delivery', 'arrived', 'package', 'box'],
+<<<<<<< HEAD
+        'CustomerService': ['service', 'support', 'customer', 'return', 'refund', 'warranty']
+    }
+    
+    # Map topics to classes
+    topic_to_class = {}
+    class_keywords = defaultdict(set)
+    
+    for topic_name, topic_words in topics.items():
+        best_match = None
+        best_score = 0
+        
+        for class_name, seed_words in base_classes.items():
+            # Count overlapping words
+            overlap = set(topic_words).intersection(set(seed_words))
+            score = len(overlap)
+            
+            if score > best_score:
+                best_score = score
+                best_match = class_name
+        
+        # If no good match, assign to "Other"
+        if best_score == 0:
+            best_match = "Other"
+        
+        topic_to_class[topic_name] = best_match
+        
+        # Add topic words to class keywords
+        class_keywords[best_match].update(topic_words)
+=======
         'CustomerService': ['service', 'support', 'customer', 'return', 'refund', 'warranty'],
         "ProductQuality": [
             "Pure Grace", "Smell", "Fake", "Stay away from this book", "disappointing",
@@ -546,6 +591,7 @@ def map_topics_to_classes(topics):
     logging.info("Class assignment distribution:")
     for class_name, score in sorted(class_scores.items(), key=lambda x: x[1], reverse=True):
         logging.info(f"{class_name}: {score}")
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
     
     # Convert sets to lists
     for class_name in class_keywords:
@@ -556,6 +602,23 @@ def map_topics_to_classes(topics):
 def classify_review(review_text, review_title, class_keywords):
     """
     Classify a review into one or more classes based on expanded keywords
+<<<<<<< HEAD
+    """
+    full_text = f"{review_title} {review_text}" if review_title else review_text
+    full_text = full_text.lower()
+    
+    classes = []
+    
+    # Check for keywords in the text
+    for class_name, keywords in class_keywords.items():
+        for keyword in keywords:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', full_text):
+                classes.append(class_name)
+                break
+    
+    # If no classes were found, default to 'Product'
+    if not classes or (len(classes) == 1 and classes[0] == 'Other'):
+=======
     with improved matching for better class distribution
     """
     stemmer = PorterStemmer()
@@ -612,6 +675,7 @@ def classify_review(review_text, review_title, class_keywords):
     
     # If still no classes, default to 'Product'
     if not classes:
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
         classes = ['Product']
     elif 'Other' in classes and len(classes) > 1:
         classes.remove('Other')
@@ -656,6 +720,8 @@ def convert_amazon_reviews_format(input_file, output_file):
     # Use the index as Unnamed: 0
     new_df['Unnamed: 0'] = df.index
     
+<<<<<<< HEAD
+=======
     # Log class distribution
     class_counts = defaultdict(int)
     for classes in new_df['CommentClass_en']:
@@ -667,6 +733,7 @@ def convert_amazon_reviews_format(input_file, output_file):
         percentage = (count / len(new_df)) * 100
         logging.info(f"{class_name}: {count} ({percentage:.2f}%)")
     
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
     # Save to CSV
     logging.info(f"Saving converted format to {output_file}")
     new_df.to_csv(output_file, index=False)
@@ -684,4 +751,7 @@ if __name__ == "__main__":
     
     # Convert reviews format
     convert_amazon_reviews_format(input_file, output_file)
+<<<<<<< HEAD
+=======
 
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d

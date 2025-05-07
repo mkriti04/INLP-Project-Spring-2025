@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+Cluster,Size,Top_Labels,Sample
+0,3043,Product:1743; Speedeslimat:651; your quality:285; Priceperformance:271; good -up:143,"The product is very nice, I did not allow good"
+1,2288,Priceperformance:1403; convenience:748; Product:322; your quality:139; Speedeslimat:125,We bought it at an affordable price thanks
+2,3274,Product:1565; Priceperformance:950; Speedeslimat:590; good -up:355; convenience:295,"It reached me with a very nice packaging, a very stylish phone, I started to use it very much that it was 1 week since I started using it, and while I was talking to the other side, I started to hear that my own voice came to me again. I can say I regretted it."
+3,4395,Speedeslimat:2885; good -up:1666; Product:793; convenience:258; Priceperformance:179,"I was very satisfied with the product more than a full price performance product, the cargo came very fast in 1 day."
+=======
 Cluster,Size,Top Emotions,Avg Review Length,Sample Review
 0,3428,"Speedeslimat, good -up, convenience, your quality, Product",72.3757292882147,Fast safe
 1,402,"your quality, Product, Priceperformance, Speedeslimat, convenience",75.27611940298507,Quality.
@@ -6,3 +13,4 @@ Cluster,Size,Top Emotions,Avg Review Length,Sample Review
 4,1304,"good -up, Speedeslimat, Product, convenience, your quality",98.6058282208589,Well -packed
 5,4459,"Product, Speedeslimat, Priceperformance, good -up, convenience",76.18165507961426,very nice
 6,899,"convenience, Priceperformance, your quality, Speedeslimat, good -up",83.6106785317019,affordable
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d

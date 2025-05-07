@@ -1,3 +1,239 @@
+<<<<<<< HEAD
+#!/usr/bin/env python3
+# contrastive_analysis.py
+
+import os, ast, logging
+from collections import Counter
+import numpy as np
+import pandas as pd
+import torch
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.metrics import (
+    silhouette_score, calinski_harabasz_score,
+    normalized_mutual_info_score, adjusted_rand_score,
+    pairwise_distances
+)
+
+# ─── CONFIG ────────────────────────────────────────────────────────────────────
+DATA_DIR    = "../datasets/interim/embeddings/pt"
+SBERT_FILE  = "sbert_output_1.pt"           # your SBERT .pt filename
+ORIG_CSV    = "../datasets/interim/translated_output_1.csv"
+CLASS_CSV   = "../results/classification_results.csv"  # <-- add this
+RESULTS_DIR = "../results/contrastive_analysis"
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO
+)
+
+# ─── 1. LOAD SBERT EMBEDDINGS & MULTI‑LABELS ───────────────────────────────────
+def load_sbert():
+    logging.info("Loading original labels from CSV...")
+    df0 = pd.read_csv(ORIG_CSV)
+
+    # Parse stringified lists into Python lists
+    labels = []
+    for x in df0["CommentClass_en"]:
+        if isinstance(x, str) and x.startswith("["):
+            try:
+                lbl = ast.literal_eval(x)
+            except:
+                lbl = [x]
+        else:
+            lbl = [x]
+        labels.append(lbl)
+
+    # Build a multi‑hot matrix
+    stacked = pd.DataFrame(labels).stack()
+    dummies = pd.get_dummies(stacked, dtype=int)
+    mlb = dummies.groupby(level=0).sum()   # shape = (n_samples, n_unique_labels)
+    y_true = mlb.values
+
+    logging.info("Loading SBERT embeddings from .pt file...")
+    data = torch.load(os.path.join(DATA_DIR, SBERT_FILE))
+    feats = data.get("features", data.get("embeddings"))
+    if isinstance(feats, torch.Tensor):
+        X = feats.cpu().numpy()
+    else:
+        X = np.array(feats)
+
+    logging.info(f"Loaded X.shape={X.shape}, y_true.shape={y_true.shape}")
+    return X, y_true, df0, mlb.columns.tolist()
+
+# ─── 2. SELECT OPTIMAL K ────────────────────────────────────────────────────────
+def select_k(X, k_min=2, k_max=10):
+    sil, inert, ch = [], [], []
+    ks = list(range(k_min, k_max+1))
+    for k in ks:
+        km = KMeans(n_clusters=k, random_state=42, n_init=10).fit(X)
+        lab = km.labels_
+        sil.append(silhouette_score(X, lab))
+        inert.append(km.inertia_)
+        ch.append(calinski_harabasz_score(X, lab))
+        logging.info(f"k={k}: Sil={sil[-1]:.4f}, Inertia={inert[-1]:.1f}, CH={ch[-1]:.1f}")
+
+    # Plot metrics
+    plt.figure(figsize=(15,4))
+    for i,(arr,title) in enumerate(zip([sil,inert,ch], ["Silhouette","Inertia","Cal‑Har"])):
+        ax = plt.subplot(1,3,i+1)
+        ax.plot(ks, arr, "o-")
+        ax.set_title(title)
+        ax.set_xlabel("k")
+        ax.grid(True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, "k_selection.png"))
+    plt.close()
+
+    best_k = ks[int(np.argmax(sil))]
+    logging.info(f"Optimal k (max silhouette) = {best_k}")
+    return best_k
+
+# ─── 3. FINAL CLUSTERING ─────────────────────────────────────────────────────────
+def cluster_data(X, k):
+    km = KMeans(n_clusters=k, random_state=42, n_init=10).fit(X)
+    return km.labels_, km.cluster_centers_
+
+# ─── 4. CLUSTER–LABEL ALIGNMENT ─────────────────────────────────────────────────
+def cluster_label_alignment(y_true, labels):
+    true_flat = np.argmax(y_true, axis=1)
+    nmi = normalized_mutual_info_score(true_flat, labels)
+    ari = adjusted_rand_score(true_flat, labels)
+    logging.info(f"NMI = {nmi:.4f}, ARI = {ari:.4f}")
+    with open(os.path.join(RESULTS_DIR, "alignment.txt"), "w") as f:
+        f.write(f"NMI\t{nmi:.4f}\nARI\t{ari:.4f}\n")
+
+# ─── 5. INTRA‑ VS. INTER‑LABEL VARIANCE ───────────────────────────────────────────
+def variance_analysis(X, y_true, label_names):
+    inv = {}
+    ivr = {}
+    for i, lbl in enumerate(label_names):
+        idx_pos = np.where(y_true[:, i] == 1)[0]
+        idx_neg = np.where(y_true[:, i] == 0)[0]
+        if len(idx_pos) < 2 or len(idx_neg) < 1:
+            continue
+        d_pos = pairwise_distances(X[idx_pos], X[idx_pos])
+        intra = d_pos[np.triu_indices_from(d_pos, k=1)].mean()
+        inter = pairwise_distances(X[idx_pos], X[idx_neg]).mean()
+        inv[lbl] = intra
+        ivr[lbl] = inter
+        logging.info(f"{lbl}: intra={intra:.4f}, inter={inter:.4f}")
+    df_var = pd.DataFrame({"intra": inv, "inter": ivr})
+    df_var.to_csv(os.path.join(RESULTS_DIR, "variance_analysis.csv"))
+    # bar plot
+    df_var.plot.bar(figsize=(10,4))
+    plt.title("Intra vs Inter Label Variance")
+    plt.ylabel("Distance")
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, "variance_plot.png"))
+    plt.close()
+
+# ─── 6. PROTOTYPE DISTANCE HISTOGRAMS ────────────────────────────────────────────
+def prototype_distances(X, y_true, label_names):
+    os.makedirs(os.path.join(RESULTS_DIR, "proto_hists"), exist_ok=True)
+    for i, lbl in enumerate(label_names):
+        idx_pos = np.where(y_true[:, i] == 1)[0]
+        if len(idx_pos) < 2:
+            continue
+        proto = X[idx_pos].mean(axis=0, keepdims=True)
+        d_pos = np.linalg.norm(X[idx_pos] - proto, axis=1)
+        idx_neg = np.where(y_true[:, i] == 0)[0]
+        d_neg = np.linalg.norm(X[idx_neg] - proto, axis=1)
+        plt.figure()
+        plt.hist(d_pos, bins=50, alpha=0.7, label="positive")
+        plt.hist(d_neg, bins=50, alpha=0.7, label="negative")
+        plt.title(f"Proto Distances for '{lbl}'")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(RESULTS_DIR, "proto_hists", f"{lbl}.png"))
+        plt.close()
+
+# ─── 7. LABEL CO‑OCCURRENCE PER CLUSTER ─────────────────────────────────────────
+def cooccurrence_by_cluster(df0, labels, y_true, label_names):
+    df0c = df0.copy()
+    df0c["cluster"] = labels
+    rows = []
+    for c in np.unique(labels):
+        idxs = np.where(labels == c)[0]
+        lab_lists = [ast.literal_eval(df0c.iloc[i]["CommentClass_en"]) 
+                     if isinstance(df0c.iloc[i]["CommentClass_en"], str) and df0c.iloc[i]["CommentClass_en"].startswith("[")
+                     else [df0c.iloc[i]["CommentClass_en"]] for i in idxs]
+        flat = [l for sub in lab_lists for l in sub]
+        cnt = Counter(flat)
+        total = len(idxs)
+        for lbl, ct in cnt.items():
+            rows.append({"cluster": c, "label": lbl, "freq": ct/total})
+    pd.DataFrame(rows).to_csv(os.path.join(RESULTS_DIR, "cooccurrence.csv"), index=False)
+
+# ─── 8. OPTIONAL: ERROR RATES BY CLUSTER ────────────────────────────────────────
+def error_by_cluster(df0, labels):
+    if not os.path.exists(CLASS_CSV):
+        return
+    dfc = pd.read_csv(CLASS_CSV)
+    dfc = dfc.set_index("Unnamed: 0")
+    df0_i = df0.reset_index().set_index("index")
+    df_merged = df0_i.join(dfc, how="inner")
+    df_merged["cluster"] = labels[df_merged.index]
+    err = []
+    for c in sorted(df_merged["cluster"].unique()):
+        sub = df_merged[df_merged["cluster"] == c]
+        rate = (sub["y_true"] != sub["y_pred"]).mean()
+        err.append({"cluster": c, "error_rate": rate, "size": len(sub)})
+    pd.DataFrame(err).to_csv(os.path.join(RESULTS_DIR, "error_by_cluster.csv"), index=False)
+
+# ─── 9. VISUALIZE CLUSTERS (t‑SNE) ──────────────────────────────────────────────
+def visualize_tsne(X, labels):
+    X2 = X
+    if X.shape[1] > 50:
+        X2 = PCA(n_components=50, random_state=42).fit_transform(X)
+    X2 = TSNE(n_components=2, random_state=42, perplexity=30, n_iter=1000).fit_transform(X2)
+    df2 = pd.DataFrame(X2, columns=("x","y"))
+    df2["cluster"] = labels
+    plt.figure(figsize=(8,6))
+    sns.scatterplot(data=df2, x="x", y="y", hue="cluster", palette="tab10", s=40, alpha=0.7)
+    plt.title("t‑SNE of SBERT Embeddings by Cluster")
+    plt.tight_layout()
+    plt.savefig(os.path.join(RESULTS_DIR, "tsne_clusters.png"))
+    plt.close()
+
+# ─── MAIN ──────────────────────────────────────────────────────────────────────
+def main():
+    # 1) load embeddings & labels
+    X, y_true, df0, label_names = load_sbert()
+
+    # 2) select k
+    k_opt = select_k(X, k_min=2, k_max=8)
+
+    # 3) final clustering
+    labels, centers = cluster_data(X, k_opt)
+
+    # 4) cluster–label alignment
+    cluster_label_alignment(y_true, labels)
+
+    # 5) intra vs inter variance
+    variance_analysis(X, y_true, label_names)
+
+    # 6) prototype distance histograms
+    prototype_distances(X, y_true, label_names)
+
+    # 7) co‑occurrence
+    cooccurrence_by_cluster(df0, labels, y_true, label_names)
+
+    # 8) optional error rates
+    error_by_cluster(df0, labels)
+
+    # 9) visualization
+    visualize_tsne(X, labels)
+
+    logging.info("All analyses complete. Check the results in %s", RESULTS_DIR)
+=======
 import os
 import pandas as pd
 import numpy as np
@@ -512,6 +748,7 @@ def main():
         'summaries': summaries,
         'recommendations': recommendations
     }
+>>>>>>> c9911334d70faef7ab964419f234f9311fcf8d1d
 
 if __name__ == "__main__":
     main()
