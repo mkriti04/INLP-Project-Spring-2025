@@ -218,13 +218,13 @@ def map_topics_to_classes(topics):
   ],
   "Damage": [
     "Fast delivery",
-    "Battle price",
+    "Battle",
     "Tasty",
-    "Attack and assembly",
+    "Attack",
     "Damage",
-    "Bike repair",
-    "Bike damage",
-    "Bike warranty",
+    "repair",
+    "damage",
+    "warranty",
     "Very poor"
   ]
     }
