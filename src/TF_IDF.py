@@ -1,6 +1,6 @@
 '''
 Removing stop words, converting into lower and TIF-IDF embeddings
-And saving the model as PT file
+And saving the model as PT file - Memory-optimized version
 '''
 import os
 import pandas as pd
@@ -11,10 +11,12 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 import torch
 import pickle
+import numpy as np
 
 # Create directories if they don't exist
-os.makedirs("../datasets/interim/embeddings/csv", exist_ok=True)
-os.makedirs("../datasets/interim/embeddings/pt", exist_ok=True)
+os.makedirs("../models", exist_ok=True)
+os.makedirs("../datasets/interim/embeddings/csv/amazonreviews", exist_ok=True)
+os.makedirs("../datasets/interim/embeddings/pt/amazonreviews", exist_ok=True)
 
 # Download NLTK resources
 nltk.download('punkt')
@@ -23,7 +25,7 @@ nltk.download('wordnet')
 
 # Load the dataset
 print("→ Loading dataset...")
-df = pd.read_csv("../datasets/interim/translated_output_1_clean.csv")
+df = pd.read_csv("../datasets/interim/converted_amazonReviews_50k_clean.csv")
 print(f"Loaded dataset with {len(df)} rows")
 
 # Print column names to debug
@@ -62,69 +64,113 @@ for i in range(min(3, len(df))):
 
 # Initialize TF-IDF Vectorizer with custom tokenizer
 print("\n→ Creating TF-IDF vectors...")
-tfidf_vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, token_pattern=None)
+# Use float32 instead of float64 to reduce memory usage
+tfidf_vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, token_pattern=None, dtype=np.float32)
 
 # Fit and transform the text data
 tfidf_matrix = tfidf_vectorizer.fit_transform(df[text_column])
 print(f"TF-IDF matrix shape: {tfidf_matrix.shape}")
 
-# Convert TF-IDF matrix to DataFrame
-tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
+# Get feature names for later use
+feature_names = tfidf_vectorizer.get_feature_names_out()
 
-# Preserve original columns if they exist
+# === APPROACH 1: Process in batches for CSV ===
+# Instead of converting the entire matrix at once, save in chunks
+print("\n→ Saving TF-IDF embeddings to CSV in batches...")
+batch_size = 1000  # Adjust based on your available memory
+csv_path = "../datasets/interim/embeddings/csv/amazonreviews/tfidf_amazonreview.csv"
+
+# Create an index frame first (with original index if available)
 if 'Unnamed: 0' in df.columns:
-    tfidf_df.insert(0, 'Unnamed: 0', df['Unnamed: 0'])
+    index_df = pd.DataFrame({'Unnamed: 0': df['Unnamed: 0']})
 else:
-    tfidf_df.insert(0, 'original_index', df.index)
+    index_df = pd.DataFrame({'original_index': df.index})
 
-# Add labels column
+# Add labels if available
 if 'CommentClass_en' in df.columns:
-    tfidf_df['CommentClass_en'] = df['CommentClass_en']
+    index_df['CommentClass_en'] = df['CommentClass_en']
 
-# Save as CSV (following your original approach)
-csv_path = "../datasets/interim/embeddings/csv/tfidf_1.csv"
-tfidf_df.to_csv(csv_path, index=False)
+# Write the header row with column names
+header = list(index_df.columns) + list(feature_names)
+with open(csv_path, 'w') as f:
+    f.write(','.join(header) + '\n')
+
+# Process in batches
+for batch_start in range(0, len(df), batch_size):
+    batch_end = min(batch_start + batch_size, len(df))
+    print(f"Processing batch {batch_start//batch_size + 1}/{(len(df) + batch_size - 1)//batch_size}")
+    
+    # Extract batch of sparse matrix and convert to dense
+    batch_matrix = tfidf_matrix[batch_start:batch_end].toarray()
+    
+    # Create batch dataframe with index columns
+    batch_df = index_df.iloc[batch_start:batch_end].copy()
+    
+    # Create DataFrame from the TF-IDF matrix batch directly
+    tfidf_batch_df = pd.DataFrame(
+        batch_matrix, 
+        columns=feature_names,
+        index=batch_df.index
+    )
+    
+    # Concatenate the index dataframe and TF-IDF dataframe
+    batch_df = pd.concat([batch_df.reset_index(drop=True), 
+                         tfidf_batch_df.reset_index(drop=True)], axis=1)
+    
+    # Append to CSV (without header after first batch)
+    batch_df.to_csv(csv_path, mode='a', header=False, index=False)
+    
+    # Clear memory
+    del batch_matrix
+    del batch_df
+
 print(f"✓ Saved TF-IDF embeddings to CSV: {csv_path}")
 
+# === APPROACH 2: Save model components separately ===
 # Save the TF-IDF model as PT file
-# Create a dictionary with all necessary components to rebuild and use the model
 model_dict = {
     'vocabulary': tfidf_vectorizer.vocabulary_,
     'idf': tfidf_vectorizer.idf_,
     'stop_words': list(tfidf_vectorizer.stop_words_) if hasattr(tfidf_vectorizer, 'stop_words_') else None,
-    'feature_names': tfidf_vectorizer.get_feature_names_out(),
-    # Add any other important attributes from the vectorizer
+    'feature_names': feature_names,
 }
 
 # Save the model dictionary as a PT file
-model_path = "../datasets/interim/embeddings/pt/tfidf_model_1.pt"
+model_path = "../datasets/interim/embeddings/pt/amazonreviews/tfidf_model.pt"
 torch.save(model_dict, model_path)
 print(f"✓ Saved TF-IDF model as PT file: {model_path}")
 
 # Also save the vectorizer as pickle (for completeness and ease of use)
-# vectorizer_path = "../datasets/interim/embeddings/pt/tfidf_vectorizer_1.pkl"
+vectorizer_path = "../models/tfidf_vectorizer.pkl"
 with open(vectorizer_path, 'wb') as f:
     pickle.dump(tfidf_vectorizer, f)
 print(f"✓ Saved TF-IDF vectorizer as pickle: {vectorizer_path}")
 
-# Save TF-IDF features (embeddings) in PyTorch format
-feature_names = tfidf_vectorizer.get_feature_names_out()
-
+# === APPROACH 3: Save as sparse tensor in PyTorch format ===
 # Extract labels if available
 if 'CommentClass_en' in df.columns:
     labels = df['CommentClass_en'].tolist()
 else:
     labels = None
 
-# Save embeddings as pytorch tensor
-tfidf_tensor = torch.tensor(tfidf_matrix.toarray(), dtype=torch.float32)
-embeddings_path = "../datasets/interim/embeddings/pt/tfidf_features_2.pt"
+# Convert sparse matrix to sparse tensor (saving memory)
+print("\n→ Converting to sparse PyTorch tensor...")
+coo = tfidf_matrix.tocoo()
+indices = torch.LongTensor([coo.row, coo.col])
+values = torch.FloatTensor(coo.data)
+shape = coo.shape
+
+# Create sparse tensor
+sparse_tfidf_tensor = torch.sparse.FloatTensor(indices, values, torch.Size(shape))
+
+# Save sparse embeddings tensor
+embeddings_path = "../datasets/interim/embeddings/pt/amazonreviews/tfidf_amazonreview_sparse.pt"
 torch.save({
-    'embeddings': tfidf_tensor,
+    'embeddings': sparse_tfidf_tensor,
     'feature_names': feature_names,
     'labels': labels,
     'indices': df.index.tolist()
 }, embeddings_path)
-print(f"✓ Saved TF-IDF embeddings (.pt) with shape {tfidf_tensor.shape}")
+print(f"✓ Saved sparse TF-IDF embeddings (.pt) with shape {sparse_tfidf_tensor.shape}")
 
 print("\nTF-IDF processing completed successfully!")
