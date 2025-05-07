@@ -23,7 +23,7 @@ nltk.download('wordnet')
 
 # Load the dataset
 print("→ Loading dataset...")
-df = pd.read_csv("../datasets/interim/translated_output_2_clean.csv")
+df = pd.read_csv("../datasets/interim/translated_output_1_clean.csv")
 print(f"Loaded dataset with {len(df)} rows")
 
 # Print column names to debug
@@ -82,7 +82,7 @@ if 'CommentClass_en' in df.columns:
     tfidf_df['CommentClass_en'] = df['CommentClass_en']
 
 # Save as CSV (following your original approach)
-csv_path = "../datasets/interim/embeddings/csv/tfidf_2.csv"
+csv_path = "../datasets/interim/embeddings/csv/tfidf_1.csv"
 tfidf_df.to_csv(csv_path, index=False)
 print(f"✓ Saved TF-IDF embeddings to CSV: {csv_path}")
 
@@ -97,7 +97,7 @@ model_dict = {
 }
 
 # Save the model dictionary as a PT file
-model_path = "../datasets/interim/embeddings/pt/tfidf_model_2.pt"
+model_path = "../datasets/interim/embeddings/pt/tfidf_model_1.pt"
 torch.save(model_dict, model_path)
 print(f"✓ Saved TF-IDF model as PT file: {model_path}")
 
