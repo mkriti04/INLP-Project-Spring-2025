@@ -1,0 +1,255 @@
+=== E-commerce Review Classification Tool ===
+Enter your review text (press Enter twice to finish):
+The device was very successful compared to the price.
+
+
+--- Classification Results for CBOW Embeddings with SimpleNN ---
+Predicted Labels: ['Priceperformance', 'fiyatperformans', 'good -up', 'kaliteliürün', 'your quality', 'ürüngüzel']
+
+Label Probabilities:
+  Priceperformance: 0.6560
+  good -up: 0.6344
+  your quality: 0.5882
+  ürüngüzel: 0.5255
+  fiyatperformans: 0.5218
+  kaliteliürün: 0.5104
+  Speedeslimat: 0.4970
+  hızlıteslimat: 0.4950
+  uygunfiyat: 0.4922
+  iyipaketleme: 0.4841
+  Product: 0.4660
+  convenience: 0.3759
+
+--- Classification Results for CBOW Embeddings with DeepNN ---
+Predicted Labels: ['Product', 'convenience', 'fiyatperformans', 'good -up', 'uygunfiyat']
+
+Label Probabilities:
+  Product: 0.5253
+  uygunfiyat: 0.5215
+  good -up: 0.5129
+  fiyatperformans: 0.5082
+  convenience: 0.5008
+  Priceperformance: 0.4870
+  your quality: 0.4794
+  ürüngüzel: 0.4775
+  kaliteliürün: 0.4756
+  iyipaketleme: 0.4718
+  hızlıteslimat: 0.4699
+  Speedeslimat: 0.4617
+
+--- Classification Results for SKIPGRAM Embeddings with SimpleNN ---
+Predicted Labels: ['Product', 'Speedeslimat', 'convenience', 'good -up', 'kaliteliürün', 'ürüngüzel']
+
+Label Probabilities:
+  kaliteliürün: 0.6107
+  Product: 0.5783
+  Speedeslimat: 0.5344
+  ürüngüzel: 0.5275
+  convenience: 0.5155
+  good -up: 0.5094
+  Priceperformance: 0.4923
+  fiyatperformans: 0.4860
+  iyipaketleme: 0.4837
+  your quality: 0.4408
+  hızlıteslimat: 0.4327
+  uygunfiyat: 0.3932
+
+--- Classification Results for SKIPGRAM Embeddings with DeepNN ---
+Predicted Labels: ['Priceperformance', 'Product', 'Speedeslimat', 'good -up', 'hızlıteslimat', 'iyipaketleme', 'uygunfiyat']
+
+Label Probabilities:
+  uygunfiyat: 0.5368
+  Priceperformance: 0.5290
+  good -up: 0.5212
+  Product: 0.5201
+  Speedeslimat: 0.5141
+  iyipaketleme: 0.5139
+  hızlıteslimat: 0.5082
+  your quality: 0.4991
+  kaliteliürün: 0.4963
+  fiyatperformans: 0.4956
+  convenience: 0.4794
+  ürüngüzel: 0.4713
+
+--- Classification Results for SBERT Embeddings with SimpleNN ---
+Predicted Labels: ['Product']
+
+Label Probabilities:
+  Product: 0.2940
+  convenience: 0.2706
+  Priceperformance: 0.2497
+  Speedeslimat: 0.1946
+  good -up: 0.1897
+  your quality: 0.1470
+  ürüngüzel: 0.1006
+  iyipaketleme: 0.0887
+  hızlıteslimat: 0.0843
+  fiyatperformans: 0.0783
+  uygunfiyat: 0.0706
+  kaliteliürün: 0.0678
+
+--- Classification Results for SBERT Embeddings with DeepNN ---
+Predicted Labels: ['Priceperformance', 'Speedeslimat', 'convenience', 'fiyatperformans', 'good -up', 'iyipaketleme', 'kaliteliürün', 'uygunfiyat', 'your quality']
+
+Label Probabilities:
+  convenience: 0.5310
+  uygunfiyat: 0.5297
+  good -up: 0.5292
+  Speedeslimat: 0.5262
+  Priceperformance: 0.5260
+  fiyatperformans: 0.5189
+  iyipaketleme: 0.5059
+  your quality: 0.5028
+  kaliteliürün: 0.5002
+  hızlıteslimat: 0.4964
+  ürüngüzel: 0.4855
+  Product: 0.4736
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  === E-commerce Review Classification Tool ===
+Enter your review text (press Enter twice to finish):
+The product is announced to those who will get the headset from the very nice box.
+
+
+--- Classification Results for CBOW Embeddings with SimpleNN ---
+Predicted Labels: ['good -up']
+
+Label Probabilities:
+  good -up: 0.8369
+  Product: 0.1975
+  Speedeslimat: 0.1927
+  kaliteliürün: 0.0124
+  convenience: 0.0061
+  hızlıteslimat: 0.0010
+  Priceperformance: 0.0001
+  ürüngüzel: 0.0000
+  fiyatperformans: 0.0000
+  iyipaketleme: 0.0000
+  your quality: 0.0000
+  uygunfiyat: 0.0000
+
+--- Classification Results for CBOW Embeddings with DeepNN ---
+Predicted Labels: ['good -up']
+
+Label Probabilities:
+  good -up: 0.9726
+  Product: 0.0568
+  Speedeslimat: 0.0038
+  kaliteliürün: 0.0000
+  Priceperformance: 0.0000
+  hızlıteslimat: 0.0000
+  convenience: 0.0000
+  fiyatperformans: 0.0000
+  ürüngüzel: 0.0000
+  your quality: 0.0000
+  iyipaketleme: 0.0000
+  uygunfiyat: 0.0000
+
+--- Classification Results for SKIPGRAM Embeddings with SimpleNN ---
+Predicted Labels: ['Speedeslimat']
+
+Label Probabilities:
+  Speedeslimat: 0.6476
+  Product: 0.1172
+  good -up: 0.0907
+  kaliteliürün: 0.0694
+  convenience: 0.0243
+  fiyatperformans: 0.0212
+  hızlıteslimat: 0.0073
+  ürüngüzel: 0.0029
+  your quality: 0.0006
+  Priceperformance: 0.0006
+  iyipaketleme: 0.0003
+  uygunfiyat: 0.0001
+
+--- Classification Results for SKIPGRAM Embeddings with DeepNN ---
+Predicted Labels: ['Speedeslimat']
+
+Label Probabilities:
+  Speedeslimat: 0.9822
+  kaliteliürün: 0.0082
+  Product: 0.0017
+  good -up: 0.0008
+  fiyatperformans: 0.0005
+  hızlıteslimat: 0.0004
+  convenience: 0.0001
+  Priceperformance: 0.0000
+  ürüngüzel: 0.0000
+  your quality: 0.0000
+  iyipaketleme: 0.0000
+  uygunfiyat: 0.0000
+
+--- Classification Results for SBERT Embeddings with SimpleNN ---
+Predicted Labels: ['Speedeslimat', 'good -up']
+
+Label Probabilities:
+  Speedeslimat: 0.8346
+  good -up: 0.6394
+  Priceperformance: 0.1710
+  Product: 0.0818
+  convenience: 0.0250
+  your quality: 0.0101
+  fiyatperformans: 0.0069
+  uygunfiyat: 0.0041
+  hızlıteslimat: 0.0041
+  iyipaketleme: 0.0030
+  ürüngüzel: 0.0029
+  kaliteliürün: 0.0025
+
+--- Classification Results for SBERT Embeddings with DeepNN ---
+Predicted Labels: ['Priceperformance', 'Speedeslimat', 'good -up']
+
+Label Probabilities:
+  Speedeslimat: 0.7957
+  good -up: 0.5706
+  Priceperformance: 0.5018
+  Product: 0.0247
+  convenience: 0.0242
+  your quality: 0.0041
+  fiyatperformans: 0.0004
+  kaliteliürün: 0.0000
+  uygunfiyat: 0.0000
+  ürüngüzel: 0.0000
+  hızlıteslimat: 0.0000
+  iyipaketleme: 0.0000
+
+=== Best Model ===
+Embedding: SKIPGRAM, Model: DeepNN
+Predicted Labels: ['Speedeslimat']
+Highest Probability: 0.9822
